@@ -84,6 +84,15 @@ jobs:
           name: operit2-android-runtime-${{ github.sha }}
           path: apps/flutter/app/android/app/src/main
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Create project Python environment
+        shell: pwsh
+        run: python -m venv .venv
+
       - name: Install bootstrap Dart
         uses: dart-lang/setup-dart@v1
         with:
@@ -93,6 +102,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Install build hook TypeScript compiler
+        shell: pwsh
+        run: npm install --prefix .ci-tools/typescript --no-audit --no-fund typescript@5.9.3
+
+      - name: Install built-in workflow plugin dependencies
+        working-directory: plugins/packages/buildin/workflow
+        shell: pwsh
+        run: |
+          corepack enable pnpm
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          corepack pnpm install --frozen-lockfile
 
       - name: Install Java
         uses: actions/setup-java@v4
@@ -164,7 +185,7 @@ jobs:
 
       - name: Check build environment
         shell: pwsh
-        run: python tools/build_scripts/check_build_environment.py --products app --github-runner
+        run: .\.venv\Scripts\python.exe tools/build_scripts/check_build_environment.py --products app --github-runner
 
       - name: Build and package Android app
         shell: pwsh
@@ -173,7 +194,7 @@ jobs:
           if ($version.Count -ne 1) {
             throw "apps/flutter/app/pubspec.yaml must contain exactly one release version line"
           }
-          python tools/build_scripts/build_flutter_android.py --build-name $version[0].Groups[1].Value --build-number $version[0].Groups[2].Value --enforce-lockfile
+          .\.venv\Scripts\python.exe tools/build_scripts/build_flutter_android.py --build-name $version[0].Groups[1].Value --build-number $version[0].Groups[2].Value --enforce-lockfile
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
